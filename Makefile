@@ -20,7 +20,7 @@ init:
 	if [ ! -d "obj" ]; then mkdir obj; fi
 
 toy: clean init $(TARGET)
-	./main -i data/epfl/arithmetic/hyp.blif
+	./main -i data/epfl/random_control/mem_ctrl.blif
 
 test:
 	sh batch.sh

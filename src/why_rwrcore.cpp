@@ -115,7 +115,7 @@ Dec_Graph_t * WHY_CutEvaluate( Rwr_Man_t * p, Abc_Obj_t * pRoot, Cut_Cut_t * pCu
     return pGraphBest;
 }
 
-int WHY_NodeRewrite( Rwr_Man_t * p, Cut_Man_t * pManCut, Abc_Obj_t * pNode, int fUpdateLevel, int fUseZeros, int fPlaceEnable )
+Solution WHY_NodeRewrite( Rwr_Man_t * p, Cut_Man_t * pManCut, Abc_Obj_t * pNode, int fUpdateLevel, int fUseZeros, int fPlaceEnable )
 {
     int fVeryVerbose = 0;
     Dec_Graph_t * pGraph;
@@ -134,7 +134,8 @@ int WHY_NodeRewrite( Rwr_Man_t * p, Cut_Man_t * pManCut, Abc_Obj_t * pNode, int 
 //                                  Marks                                    //
 //                                                                           //
 // ========================================================================= //
-    int GainBest = -2147483648;
+    int GainBest = -1;
+    int * BestCut = NULL;//, * pTemp;
     
     
     abctime clk, clk2;//, Counter;
@@ -226,6 +227,14 @@ p->timeEval += Abc_Clock() - clk2;
             // save this form
             nNodesSaveCur = nNodesSaved;
             GainBest  = GainCur;
+
+// ========================================================================= //
+//                                                                           //
+//                                  Marks                                    //
+//                                                                           //
+// ========================================================================= //
+            BestCut = pCut->pLeaves;
+
             p->pGraph  = pGraph;
             p->fCompl = ((uPhase & (1<<4)) > 0);
             uTruthBest = 0xFFFF & *Cut_CutReadTruth(pCut);
@@ -238,7 +247,7 @@ p->timeEval += Abc_Clock() - clk2;
 p->timeRes += Abc_Clock() - clk;
 
     if ( GainBest == -1 )
-        return -1;
+        return Solution( -1, NULL );
 /*
     if ( GainBest > 0 )
     {
@@ -304,5 +313,5 @@ p->timeRes += Abc_Clock() - clk;
         printf( "Class = %d.  ", p->pMap[uTruthBest] );
         printf( "\n" );
     }
-    return GainBest;
+    return Solution( GainBest, BestCut );
 }

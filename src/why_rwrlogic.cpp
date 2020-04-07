@@ -68,19 +68,19 @@ SA :: ~SA() {
  * @pNode: target node to perform rewrite
  * @return: the gain of rewriting
  */
-int SA :: NodeRewrite( Abc_Obj_t * pNode ) {
+Solution SA :: NodeRewrite( Abc_Obj_t * pNode ) {
 
     // skip invalid nodes
     if (pNode == nullptr)
-        return 0;
+        return Solution( -1, NULL );
 
     // skip persistant nodes
     if ( Abc_NodeIsPersistant(pNode) )
-        return 0;
+        return Solution( -1, NULL );
 
     // skip the nodes with many fanouts
     if ( Abc_ObjFanoutNum(pNode) > 1000 )
-        return 0;
+        return Solution( -1, NULL );
 
     return WHY_NodeRewrite( pManRwr, pManCut, pNode, 1, 0, 0 );
 
@@ -136,21 +136,18 @@ void SA :: Anneal( double step ) {
  */
 void SA :: Rewrite( RWR_METHOD method ) {
 
-    vector<int> count;
-    int number = 10;
-    while( number -- ) count.push_back( 0 );
-
     Abc_Obj_t * pObj;
     int i;
     Abc_NtkForEachNode( pNtk, pObj, i ) {
-        int gain = NodeRewrite( pObj );
+        Solution solution = NodeRewrite( pObj );
+        int gain = solution.gain;
+        if ( gain > 0 ) {
+            cout << "Gain = " << gain << "\t id = "<< Abc_ObjId( pObj ) << endl;
+            for (unsigned int j=0;j<4;j++) 
+                cout << "\t Leaf #" << j << ":" << solution.leaves[j] << endl;
+        }
         // if ( gain > 0 ) NodeUpdate( pObj );
 
-        gain = gain < 0 ? 0 : gain;
-        if ( gain < 10 ) count[gain]++;
     }
 
-    cout << endl;
-    for( auto & bin : count ) cout << (int)bin <<  " | ";
-    cout << endl;
 }

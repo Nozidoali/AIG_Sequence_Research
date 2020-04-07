@@ -27,8 +27,8 @@ private:
     void    Anneal      ( double step );
 
 //==========================Rewrite======================//
-    int     NodeRewrite ( Abc_Obj_t * pNode );
-    void    NodeUpdate  ( Abc_Obj_t * pNode );
+    Solution    NodeRewrite ( Abc_Obj_t * pNode );
+    void        NodeUpdate  ( Abc_Obj_t * pNode );
 
 public:
     SA( Abc_Ntk_t * pNtk, int _T0, int _runtime );

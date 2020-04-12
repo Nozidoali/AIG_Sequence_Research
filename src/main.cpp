@@ -40,13 +40,13 @@ int main(int argc, char * argv[])
     DASSERT(Abc_NtkIsStrash(pNtkNew));
     DASSERT(!Abc_NtkGetChoiceNum(pNtkNew));
 
-    // cout << Abc_NtkNodeNum(pNtkNew) << "," << Abc_NtkLevel(pNtkNew) << ",";
+    cout << Abc_NtkNodeNum(pNtkNew) << "," << Abc_NtkLevel(pNtkNew) << ",";
 
-    SA * sa = new SA( pNtkNew, 10.0, 1000 );
-    sa->Rewrite( SEQUENTIAL );
+    SA * sa = new SA( pNtkNew, 0.2, 200000, 0.99 );
+    sa->Rewrite( SIMUANNEAL );
     delete sa;
 
-    // cout << Abc_NtkNodeNum(pNtkNew) << "," << Abc_NtkLevel(pNtkNew) << ",";
+    cout << Abc_NtkNodeNum(pNtkNew) << "," << Abc_NtkLevel(pNtkNew) << ",";
     Abc_NtkDelete(pNtkNew);
 
     // recycle memory

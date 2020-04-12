@@ -13,12 +13,13 @@
  * @_T0: initial temperature (maximum loss tolerance)
  * @_runtime: number of iterations
  */
-SA :: SA( Abc_Ntk_t * _pNtk, int _T0, int _runtime ) {
+SA :: SA( Abc_Ntk_t * _pNtk, double _T0, int _runtime, double _ratio ) {
 
     // assignments
     pNtk = _pNtk; 
     T0 = temperature = _T0;
     iteration = ( runtime = _runtime ) , 0;
+    ratio = _ratio;
 
     assert( Abc_NtkIsStrash(pNtk) );
     Abc_AigCleanup((Abc_Aig_t *)pNtk->pManFunc);
@@ -82,7 +83,7 @@ Solution SA :: NodeRewrite( Abc_Obj_t * pNode ) {
     if ( Abc_ObjFanoutNum(pNode) > 1000 )
         return Solution( -1, NULL );
 
-    return WHY_NodeRewrite( pManRwr, pManCut, pNode, 1, 0, 0 );
+    return WHY_NodeRewrite( pManRwr, pManCut, pNode, 1, 0, 0, temperature );
 
 }
 
@@ -110,11 +111,14 @@ void SA :: NodeUpdate( Abc_Obj_t * pNode ) {
  * 
  * Decide if the result is acceptable
  */
-bool SA :: isAccepted ( int score ) {
+bool SA :: isAccepted ( Solution solution ) {
 
+    if ( solution.leaves == NULL )
+        return false;
+    int score = solution.gain;
     double rand_num = rand() / ( RAND_MAX + 1.0 ); 
-    double threshold = score > 0 ? 1.0 : exp( - (double)score / temperature );
-    return rand_num <= threshold;
+    double threshold = score > 0 ? 1.0 : exp( (double)score / temperature );
+    return rand_num < threshold;
 
 }
 
@@ -123,9 +127,9 @@ bool SA :: isAccepted ( int score ) {
  * 
  * Decrease the temperature and increase iteration
  */
-void SA :: Anneal( double step ) {
+void SA :: Anneal() {
     
-    temperature = T0 / ( 1 + (++iteration) );
+    temperature *= ratio;
 
 }
 
@@ -135,19 +139,48 @@ void SA :: Anneal( double step ) {
  * 
  */
 void SA :: Rewrite( RWR_METHOD method ) {
+    int numOld = Abc_NtkNodeNum( pNtk );
+    int totGain = 0;
+    int attemps = 0;
 
-    Abc_Obj_t * pObj;
-    int i;
-    Abc_NtkForEachNode( pNtk, pObj, i ) {
-        Solution solution = NodeRewrite( pObj );
-        int gain = solution.gain;
-        if ( gain > 0 ) {
-            cout << "Gain = " << gain << "\t id = "<< Abc_ObjId( pObj ) << endl;
-            for (unsigned int j=0;j<4;j++) 
-                cout << "\t Leaf #" << j << ":" << solution.leaves[j] << endl;
+    switch ( method )
+    {
+    case SEQUENTIAL:
+        Abc_Obj_t * pObj;
+        int i;
+        Abc_NtkForEachNode( pNtk, pObj, i ) {
+            Solution solution = NodeRewrite( pObj );
+            int gain = solution.gain;
+            if ( gain > 0 ) {
+                cout << "Gain = " << gain << "\t id = "<< Abc_ObjId( pObj ) << endl;
+                for (unsigned int j=0;j<4;j++) 
+                    cout << "\t Leaf #" << j << ":" << solution.leaves[j] << endl;
+            }
+            // if ( gain > 0 ) NodeUpdate( pObj );
+
         }
-        // if ( gain > 0 ) NodeUpdate( pObj );
+        break;
 
+    case SIMUANNEAL:
+        cerr << "Iteration,Temperature,TotalGain" << endl;
+        for( iteration = 0, attemps = 0; attemps < runtime && iteration < runtime; attemps ++) {
+            Abc_Obj_t * pObj = WHY_RandNode( pNtk );
+            Solution solution = NodeRewrite( pObj );
+            if ( solution.leaves != NULL ) {
+                iteration ++;
+                totGain += solution.gain;
+                cerr << iteration << ",";
+                cerr << (double)temperature << ",";
+                cerr << totGain << endl;
+                NodeUpdate( pObj ); 
+                Anneal();
+            }
+        }
+        cerr << endl;
+        break;   
+    default:
+        break;
     }
+
 
 }

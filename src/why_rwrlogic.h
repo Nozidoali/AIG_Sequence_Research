@@ -5,6 +5,7 @@
 
 enum RWR_METHOD {
     SEQUENTIAL,
+    SIMUANNEAL,
     RANDOM,
     NONE
 };
@@ -20,18 +21,18 @@ private:
     Abc_Ntk_t * pNtk;
 
 //======================SA Attributes===================//
-    double  T0, temperature;
+    double  T0, temperature, ratio;
     int     iteration;
     int     runtime;
-    bool    isAccepted  ( int score );
-    void    Anneal      ( double step );
+    bool    isAccepted  ( Solution solution );
+    void    Anneal      ();
 
 //==========================Rewrite======================//
     Solution    NodeRewrite ( Abc_Obj_t * pNode );
     void        NodeUpdate  ( Abc_Obj_t * pNode );
 
 public:
-    SA( Abc_Ntk_t * pNtk, int _T0, int _runtime );
+    SA( Abc_Ntk_t * pNtk, double _T0, int _runtime, double _ratio );
     ~SA();
     void    Rewrite     ( RWR_METHOD method );
 

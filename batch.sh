@@ -6,7 +6,7 @@ do
         name=`basename $file`
         filename="${name%%.*}"
         echo ${filename} 
-        echo "${filename} | \c " >> test.csv
+        echo "${filename},\c " >> test.csv
         ./main -i ${file} >> test.csv
         echo "" >> test.csv
     fi
@@ -18,7 +18,7 @@ do
         name=`basename $file`
         filename="${name%%.*}"
         echo ${filename}
-        echo "${filename} | \c" >> test.csv
+        echo "${filename},\c" >> test.csv
         ./main -i ${file} >> test.csv
         echo  "" >> test.csv
     fi

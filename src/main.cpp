@@ -42,7 +42,9 @@ int main(int argc, char * argv[])
 
     cout << Abc_NtkNodeNum(pNtkNew) << "," << Abc_NtkLevel(pNtkNew) << ",";
 
-    SA * sa = new SA( pNtkNew, 0.2, 200000, 0.99 );
+    SA * sa = new SA( pNtkNew, 5, 200000, 0.9 );
+    // sa->Rewrite( SEQUENTIAL );
+    // cout << Abc_NtkNodeNum(pNtkNew) << "," << Abc_NtkLevel(pNtkNew) << ",";
     sa->Rewrite( SIMUANNEAL );
     delete sa;
 

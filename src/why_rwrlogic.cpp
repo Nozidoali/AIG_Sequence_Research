@@ -151,12 +151,12 @@ void SA :: Rewrite( RWR_METHOD method ) {
         Abc_NtkForEachNode( pNtk, pObj, i ) {
             Solution solution = NodeRewrite( pObj );
             int gain = solution.gain;
-            if ( gain > 0 ) {
-                cout << "Gain = " << gain << "\t id = "<< Abc_ObjId( pObj ) << endl;
-                for (unsigned int j=0;j<4;j++) 
-                    cout << "\t Leaf #" << j << ":" << solution.leaves[j] << endl;
-            }
-            // if ( gain > 0 ) NodeUpdate( pObj );
+            // if ( gain > 0 ) {
+            //     cout << "Gain = " << gain << "\t id = "<< Abc_ObjId( pObj ) << endl;
+            //     for (unsigned int j=0;j<4;j++) 
+            //         cout << "\t Leaf #" << j << ":" << solution.leaves[j] << endl;
+            // }
+            if ( gain > 0 ) NodeUpdate( pObj );
 
         }
         break;

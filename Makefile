@@ -20,7 +20,7 @@ init:
 	if [ ! -d "obj" ]; then mkdir obj; fi
 
 toy: clean init $(TARGET)
-	./main -i data/epfl/random_control/mem_ctrl.blif 2> data.csv
+	./main -i data/epfl/random_control/ctrl.blif 2> data.csv
 	python sa.py
 	
 test:

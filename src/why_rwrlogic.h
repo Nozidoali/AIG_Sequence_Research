@@ -2,11 +2,17 @@
 #define WHY_REWRITE_LOGIC_H
 
 #include "why_rwrcore.h"
+#include <map>
+
+#define REWRITED    1
+#define NOSOL       2
 
 enum RWR_METHOD {
     SEQUENTIAL,
     SIMUANNEAL,
+    RANDNEG,
     RANDOM,
+    ALTERSEQ,
     NONE
 };
 
@@ -27,9 +33,12 @@ private:
     bool    isAccepted  ( Solution solution );
     void    Anneal      ();
 
+//====================Node Attributes===================//
+    map<int, int> history;
+
 //==========================Rewrite======================//
     Solution    NodeRewrite ( Abc_Obj_t * pNode );
-    void        NodeUpdate  ( Abc_Obj_t * pNode );
+    Abc_Obj_t * NodeUpdate  ( Abc_Obj_t * pNode );
 
 public:
     SA( Abc_Ntk_t * pNtk, double _T0, int _runtime, double _ratio );

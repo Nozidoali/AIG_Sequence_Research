@@ -13,6 +13,7 @@ using namespace cmdline;
 struct Solution {
     int gain;
     int * leaves;   // 4 feasible cut
+    Solution(){}
     Solution( int _gain, int * _leaves ) { gain = _gain; leaves = _leaves; }
 };
 

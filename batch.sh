@@ -1,4 +1,4 @@
-echo "file,oldsize,oldlevel,rwrsize,rwrlevel,sasize,salevel" > test.csv
+echo "file,oldsize,oldlevel,rwrsize,rwrlevel,runtime" > test.csv
 for file in data/epfl/random_control/*
 do
     if test -f $file ;

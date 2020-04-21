@@ -2,6 +2,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 df = pd.read_csv('data.csv')
-df.plot( x = 'Iteration', y = 'TotalGain', color = 'Blue', title = 'r=0.9, t=5', yticks = range(0,70,5) )
-# df.plot( x = 'Iteration', y = 'Temperature', color = 'Red' )
+df['improve'] = df.size_before - df.size_after
+ax = df[df.type == 'seq'].plot( kind = 'line', x = 'runtime', y = 'improve', color = 'Blue', grid = True, yticks = range(80,120,2) )
+df[df.type == 'sa'].plot( kind = 'line', x = 'runtime', y = 'improve', color = 'red', ax = ax )
 plt.show()

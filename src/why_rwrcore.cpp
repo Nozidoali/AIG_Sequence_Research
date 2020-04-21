@@ -109,7 +109,8 @@ Dec_Graph_t * WHY_CutEvaluate( Rwr_Man_t * p, Abc_Obj_t * pRoot, Cut_Cut_t * pCu
 //                                                                           //
 // ========================================================================= //
     // determine the best subgraph
-    GainBest = -2147483648;
+    int initGain = -2147483648;
+    GainBest = initGain;
     CostBest = ABC_INFINITY;
     Vec_PtrForEachEntry( Rwr_Node_t *, vSubgraphs, pNode, i )
     {
@@ -151,7 +152,7 @@ Dec_Graph_t * WHY_CutEvaluate( Rwr_Man_t * p, Abc_Obj_t * pRoot, Cut_Cut_t * pCu
 //                                  Marks                                    //
 //                                                                           //
 // ========================================================================= //
-    if ( GainBest == -2417483648 )
+    if ( GainBest == initGain )
         return NULL;
     *pGainBest = GainBest;
     return pGraphBest;
@@ -176,7 +177,8 @@ Solution WHY_NodeRewrite( Rwr_Man_t * p, Cut_Man_t * pManCut, Abc_Obj_t * pNode,
 //                                  Marks                                    //
 //                                                                           //
 // ========================================================================= //
-    int GainBest = -2147483648;
+    int initGain = -2147483648;
+    int GainBest = initGain;
     int * BestCut = NULL;//, * pTemp;
     
     
@@ -279,12 +281,17 @@ p->timeRes += Abc_Clock() - clk;
 // ========================================================================= //
 //                                                                           //
 //                                  Marks                                    //
-//                                                                           //
+//                              Simulated Annealing                          //
 // ========================================================================= //
+
+    if ( temperature <= 0 && GainBest < temperature )
+        return Solution( -1, NULL );
     double rand_num = rand() / ( RAND_MAX + 1.0 ); 
     double threshold = GainBest > 0 ? 1.0 : exp( (double)GainBest / temperature );
-
-    if ( GainBest == -2147483648 || GainBest == 0 || threshold <= rand_num )
+    
+    if ( temperature != -1 && threshold <= rand_num )
+        return Solution( -1, NULL );
+    if ( GainBest == initGain || GainBest == 0 )
         return Solution( -1, NULL );
 
     // copy the leaves

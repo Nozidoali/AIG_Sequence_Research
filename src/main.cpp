@@ -1,4 +1,5 @@
 #include "why_rwrlogic.h"
+#include <ctime>
 
 parser Cmdline_Parser(int argc, char * argv[])
 {
@@ -40,19 +41,30 @@ int main(int argc, char * argv[])
     DASSERT(Abc_NtkIsStrash(pNtkNew));
     DASSERT(!Abc_NtkGetChoiceNum(pNtkNew));
 
+    int start_time = clock();
+
     cout << Abc_NtkNodeNum(pNtkNew) << "," << Abc_NtkLevel(pNtkNew) << ",";
 
-    SA * sa = new SA( pNtkNew, 5, 200000, 0.9 );
+    SA * sa = new SA ( pNtkNew, 1, 50, 0.9 );
+
     // sa->Rewrite( SEQUENTIAL );
     // cout << Abc_NtkNodeNum(pNtkNew) << "," << Abc_NtkLevel(pNtkNew) << ",";
-    sa->Rewrite( SIMUANNEAL );
+    // sa->Rewrite( RANDNEG );
+    sa->Rewrite( ALTERSEQ );
     delete sa;
 
-    cout << Abc_NtkNodeNum(pNtkNew) << "," << Abc_NtkLevel(pNtkNew) << ",";
-    Abc_NtkDelete(pNtkNew);
+    cout << Abc_NtkNodeNum( pNtkNew ) << "," << Abc_NtkLevel( pNtkNew ) << ",";
+
+    Abc_Ntk_t * pNtkNetlist = Abc_NtkToNetlist( pNtkNew );
+    Io_WriteBlif( pNtkNetlist, "output.blif", 0, 0, 0 );
+
+    cout << clock() - start_time;
+    Abc_NtkDelete( pNtkNew );
+
 
     // recycle memory
     Abc_Stop();
 
+    cout << endl;
     return 0;
 }

@@ -95,7 +95,7 @@ Solution SA :: NodeRewrite( Abc_Obj_t * pNode ) {
  */
 extern "C" Abc_Obj_t * Dec_GraphToNetwork( Abc_Ntk_t * pNtk, Dec_Graph_t * pGraph );
 
-void SA :: NodeUpdate( Abc_Obj_t * pNode ) {
+Abc_Obj_t * SA :: NodeUpdate( Abc_Obj_t * pNode ) {
 
     Dec_Graph_t * pGraph = (Dec_Graph_t *)Rwr_ManReadDecs(pManRwr);
     int fCompl = Rwr_ManReadCompl( pManRwr );
@@ -103,6 +103,7 @@ void SA :: NodeUpdate( Abc_Obj_t * pNode ) {
     Abc_Obj_t * pNodeNew = Dec_GraphToNetwork( pNtk, pGraph );
     Abc_AigReplace( (Abc_Aig_t *)pNtk->pManFunc, pNode, pNodeNew, 1 );
     if ( fCompl ) Dec_GraphComplement( pGraph );
+    return pNodeNew;
 
 }
 
@@ -142,12 +143,12 @@ void SA :: Rewrite( RWR_METHOD method ) {
     int numOld = Abc_NtkNodeNum( pNtk );
     int totGain = 0;
     int attemps = 0;
-
+    Abc_Obj_t * pObj;
+    int i;
     switch ( method )
     {
     case SEQUENTIAL:
-        Abc_Obj_t * pObj;
-        int i;
+        temperature = -1;
         Abc_NtkForEachNode( pNtk, pObj, i ) {
             Solution solution = NodeRewrite( pObj );
             int gain = solution.gain;
@@ -162,25 +163,107 @@ void SA :: Rewrite( RWR_METHOD method ) {
         break;
 
     case SIMUANNEAL:
-        cerr << "Iteration,Temperature,TotalGain" << endl;
+        // cerr << "Iteration,Temperature,TotalGain" << endl;
         for( iteration = 0, attemps = 0; attemps < runtime && iteration < runtime; attemps ++) {
             Abc_Obj_t * pObj = WHY_RandNode( pNtk );
             Solution solution = NodeRewrite( pObj );
             if ( solution.leaves != NULL ) {
                 iteration ++;
                 totGain += solution.gain;
-                cerr << iteration << ",";
-                cerr << (double)temperature << ",";
-                cerr << totGain << endl;
+                // cerr << iteration << ",";
+                // cerr << (double)temperature << ",";
+                // cerr << totGain << endl;
                 NodeUpdate( pObj ); 
                 Anneal();
             }
         }
+        // SEQ at last to fix the obvious nodes
+        Rewrite( SEQUENTIAL );
         cerr << endl;
         break;   
+    
+    case ALTERSEQ:
+
+        // cerr << Abc_NtkNodeNum( pNtk ) << endl;
+
+        // SEQ+
+        temperature = 0;
+        Abc_AigForEachAnd( pNtk, pObj, i ) {
+            history[ Abc_ObjId( pObj ) ] = 0;
+            Solution solution = NodeRewrite( pObj );
+            if ( solution.leaves != NULL ) {
+                Abc_Obj_t * pObjNew = NodeUpdate( pObj );
+                history[ Abc_ObjId( pObjNew ) ] = 1;
+            }
+        }
+
+        // cerr << Abc_NtkNodeNum( pNtk ) << endl;
+
+        // loop for <runtime> period
+        for ( iteration=0;iteration<runtime;iteration++) {
+
+            // SEQ-
+            temperature = -2;
+            int flex = 10;
+            while ( flex -- ) {
+                Abc_Obj_t * pTarget = WHY_RandNode( pNtk );
+
+                Solution solution = NodeRewrite( pTarget );
+                if ( solution.leaves != NULL ) {
+                    NodeUpdate( pTarget );
+                }
+            }
+
+        // cerr << Abc_NtkNodeNum( pNtk ) << endl;
+
+            // SEQ+
+            temperature = 0;
+            Abc_AigForEachAnd( pNtk, pObj, i ) {
+                history[ Abc_ObjId( pObj ) ] = 0;
+                Solution solution = NodeRewrite( pObj );
+                if ( solution.leaves != NULL ) {
+                    Abc_Obj_t * pObjNew = NodeUpdate( pObj );
+                    history[ Abc_ObjId( pObj ) ] = 1;
+                }
+            }
+
+        // cerr << Abc_NtkNodeNum( pNtk ) << endl;
+
+
+        }
+                
+        break;
+    
+    case RANDNEG:
+        temperature = -1;
+        for( iteration = 0, attemps = 0; attemps < runtime && iteration < runtime; attemps ++) {
+            Abc_Obj_t * pTarget = WHY_RandNode( pNtk );
+            Solution solution = NodeRewrite( pTarget );
+            if ( solution.leaves != NULL ) {
+
+                // we find a valid solution
+                iteration ++;
+                Abc_Obj_t * pObjNew = NodeUpdate( pTarget );
+                Abc_ObjForEachFanin( pObjNew, pObj, i ) {
+                    if ( !Abc_AigNodeIsAnd( pObj ) ) {
+                        continue;
+                    }
+                    Solution leaf = NodeRewrite( pObj );
+                    if ( leaf.leaves != NULL && leaf.gain > 0 ) {
+                        NodeUpdate( pObj );
+                    }
+                }
+
+                Solution root = NodeRewrite( pObjNew );
+                if ( root.leaves != NULL && root.gain > 0 ) {
+                    NodeUpdate( pObjNew );
+                }
+
+            }
+        }
+        break;
     default:
         break;
     }
-
 
 }

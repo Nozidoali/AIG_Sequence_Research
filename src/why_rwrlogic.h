@@ -13,7 +13,13 @@ enum RWR_METHOD {
     RANDNEG,
     RANDOM,
     ALTERSEQ,
+    QUICKSEQ,
     NONE
+};
+
+enum MODE {
+    TEMP,
+    MINGAIN
 };
 
 class SA {
@@ -28,6 +34,7 @@ private:
 
 //======================SA Attributes===================//
     double  T0, temperature, ratio;
+    int     minGain;
     int     iteration;
     int     runtime;
     bool    isAccepted  ( Solution solution );
@@ -37,7 +44,7 @@ private:
     map<int, int> history;
 
 //==========================Rewrite======================//
-    Solution    NodeRewrite ( Abc_Obj_t * pNode );
+    Solution    NodeRewrite ( Abc_Obj_t * pNode, MODE mode );
     Abc_Obj_t * NodeUpdate  ( Abc_Obj_t * pNode );
 
 public:

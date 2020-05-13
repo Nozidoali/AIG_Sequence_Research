@@ -4,3 +4,6 @@ lib/
 obj/
 main
 tags
+*.csv
+*.blif
+*.tar

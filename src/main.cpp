@@ -43,20 +43,20 @@ int main(int argc, char * argv[])
 
     int start_time = clock();
 
-    cout << Abc_NtkNodeNum(pNtkNew) << "," << Abc_NtkLevel(pNtkNew) << ",";
+    cout << Abc_NtkNodeNum( pNtkNew ) << "," << Abc_NtkLevel( pNtkNew ) << ",";
 
-    SA * sa = new SA ( pNtkNew, 1, 50, 0.9 );
+    SA * sa = new SA ( pNtkNew, 1, 100000, 0.9 );
 
     // sa->Rewrite( SEQUENTIAL );
-    // cout << Abc_NtkNodeNum(pNtkNew) << "," << Abc_NtkLevel(pNtkNew) << ",";
     // sa->Rewrite( RANDNEG );
-    sa->Rewrite( ALTERSEQ );
+    sa->Rewrite( QUICKSEQ );
+
     delete sa;
 
     cout << Abc_NtkNodeNum( pNtkNew ) << "," << Abc_NtkLevel( pNtkNew ) << ",";
 
     Abc_Ntk_t * pNtkNetlist = Abc_NtkToNetlist( pNtkNew );
-    Io_WriteBlif( pNtkNetlist, "output.blif", 0, 0, 0 );
+    Io_WriteBlif( pNtkNetlist, "outputNodeUpdate.blif", 0, 0, 0 );
 
     cout << clock() - start_time;
     Abc_NtkDelete( pNtkNew );

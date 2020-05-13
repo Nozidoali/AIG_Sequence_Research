@@ -29,8 +29,10 @@ Cut_Man_t * WHY_NtkStartCutManForRewrite( Abc_Ntk_t * pNtk );
  * Adjust the gain best macha
  */
 Solution WHY_NodeRewrite( Rwr_Man_t * p, Cut_Man_t * pManCut, Abc_Obj_t * pNode, int fUpdateLevel, int fUseZeros, int fPlaceEnable, double temperature );
+Solution WHY_NodeRewrite( Rwr_Man_t * p, Cut_Man_t * pManCut, Abc_Obj_t * pNode, int fUpdateLevel, int fUseZeros, int fPlaceEnable, int minGain );
 
 Abc_Obj_t * WHY_RandNode( Abc_Ntk_t * pNtk );
 
+Vec_Ptr_t * WHY_FindNeighbours( Abc_Obj_t * pObj );
 
 #endif

@@ -21,8 +21,9 @@ init:
 
 toy: clean init $(TARGET)
 	# echo size_before,lvl_before,size_after,lvl_after,runtime > data.csv
-	./main -i data/epfl/random_control/mem_ctrl.blif >> data.csv
-	# python sa.py
+	echo size > iter.csv
+	./main -i data/epfl/random_control/mem_ctrl.blif 2>> iter.csv
+	python iter.py
 	
 test:
 	sh batch.sh
@@ -33,6 +34,7 @@ cec:
 clean:
 	if [ -d "obj" ]; then rm -rf obj; fi
 	if [ -d "*.out"]; then rm *.out; fi
+	rm $(TARGET)
 
 $(TARGET) : $(OBJ)
 	$(CC) $(CFLAG) $? -o $@ $(LIB) $(INC)

@@ -69,7 +69,7 @@ SA :: ~SA() {
  * @pNode: target node to perform rewrite
  * @return: the gain of rewriting
  */
-Solution SA :: NodeRewrite( Abc_Obj_t * pNode ) {
+Solution SA :: NodeRewrite( Abc_Obj_t * pNode, MODE mode ) {
 
     // skip invalid nodes
     if (pNode == nullptr)
@@ -83,7 +83,7 @@ Solution SA :: NodeRewrite( Abc_Obj_t * pNode ) {
     if ( Abc_ObjFanoutNum(pNode) > 1000 )
         return Solution( -1, NULL );
 
-    return WHY_NodeRewrite( pManRwr, pManCut, pNode, 1, 0, 0, temperature );
+    return WHY_NodeRewrite( pManRwr, pManCut, pNode, 1, 0, 0, mode==TEMP? temperature:minGain );
 
 }
 
@@ -150,7 +150,8 @@ void SA :: Rewrite( RWR_METHOD method ) {
     case SEQUENTIAL:
         temperature = -1;
         Abc_NtkForEachNode( pNtk, pObj, i ) {
-            Solution solution = NodeRewrite( pObj );
+            minGain = 1;
+            Solution solution = NodeRewrite( pObj, MINGAIN );
             int gain = solution.gain;
             // if ( gain > 0 ) {
             //     cout << "Gain = " << gain << "\t id = "<< Abc_ObjId( pObj ) << endl;
@@ -166,15 +167,36 @@ void SA :: Rewrite( RWR_METHOD method ) {
         // cerr << "Iteration,Temperature,TotalGain" << endl;
         for( iteration = 0, attemps = 0; attemps < runtime && iteration < runtime; attemps ++) {
             Abc_Obj_t * pObj = WHY_RandNode( pNtk );
-            Solution solution = NodeRewrite( pObj );
+            Solution solution = NodeRewrite( pObj, TEMP );
             if ( solution.leaves != NULL ) {
                 iteration ++;
                 totGain += solution.gain;
                 // cerr << iteration << ",";
                 // cerr << (double)temperature << ",";
                 // cerr << totGain << endl;
-                NodeUpdate( pObj ); 
+                Abc_Obj_t * pNew = NodeUpdate( pObj );
                 Anneal();
+                continue;
+                // try immediately fix all the neighbours
+                minGain = 1;
+                if ( !pNew ) {
+                    continue;
+                }
+                Vec_Ptr_t * vTarget = WHY_FindNeighbours( pNew );
+                int ii;
+                Abc_Obj_t * pObjj;
+                Vec_PtrForEachEntry( Abc_Obj_t *, vTarget, pObjj, ii ) {
+                    if ( Abc_ObjIsCi( pObjj ) || Abc_ObjIsCo( pObjj ) ) {
+                        continue;
+                    }
+                    if ( pObjj && Abc_AigNodeIsAnd( pObjj ) ) {
+                        Solution nb_solution = NodeRewrite( pObjj, MINGAIN );
+                        if ( solution.leaves != NULL ) {
+                            NodeUpdate( pObjj );
+                        }
+                    }
+                }
+                Vec_PtrFree( vTarget );
             }
         }
         // SEQ at last to fix the obvious nodes
@@ -190,7 +212,8 @@ void SA :: Rewrite( RWR_METHOD method ) {
         temperature = 0;
         Abc_AigForEachAnd( pNtk, pObj, i ) {
             history[ Abc_ObjId( pObj ) ] = 0;
-            Solution solution = NodeRewrite( pObj );
+            minGain = 1;
+            Solution solution = NodeRewrite( pObj, MINGAIN );
             if ( solution.leaves != NULL ) {
                 Abc_Obj_t * pObjNew = NodeUpdate( pObj );
                 history[ Abc_ObjId( pObjNew ) ] = 1;
@@ -203,12 +226,12 @@ void SA :: Rewrite( RWR_METHOD method ) {
         for ( iteration=0;iteration<runtime;iteration++) {
 
             // SEQ-
-            temperature = -2;
-            int flex = 10;
+            temperature = -1;
+            int flex = 1;
             while ( flex -- ) {
                 Abc_Obj_t * pTarget = WHY_RandNode( pNtk );
-
-                Solution solution = NodeRewrite( pTarget );
+                minGain = -1;
+                Solution solution = NodeRewrite( pTarget, MINGAIN );
                 if ( solution.leaves != NULL ) {
                     NodeUpdate( pTarget );
                 }
@@ -220,7 +243,8 @@ void SA :: Rewrite( RWR_METHOD method ) {
             temperature = 0;
             Abc_AigForEachAnd( pNtk, pObj, i ) {
                 history[ Abc_ObjId( pObj ) ] = 0;
-                Solution solution = NodeRewrite( pObj );
+                minGain = 1;
+                Solution solution = NodeRewrite( pObj, MINGAIN );
                 if ( solution.leaves != NULL ) {
                     Abc_Obj_t * pObjNew = NodeUpdate( pObj );
                     history[ Abc_ObjId( pObj ) ] = 1;
@@ -234,11 +258,111 @@ void SA :: Rewrite( RWR_METHOD method ) {
                 
         break;
     
+
+    case QUICKSEQ:
+        cerr << Abc_NtkNodeNum( pNtk ) << endl;
+
+        // SEQ+
+        minGain = 1;
+        Abc_AigForEachAnd( pNtk, pObj, i ) {
+            history[ Abc_ObjId( pObj ) ] = 0;
+            minGain = 1;
+            Solution solution = NodeRewrite( pObj, MINGAIN );
+            if ( solution.leaves != NULL ) {
+                Abc_Obj_t * pObjNew = NodeUpdate( pObj );
+                history[ Abc_ObjId( pObjNew ) ] = 1;
+            }
+        }
+
+        cerr << Abc_NtkNodeNum( pNtk ) << endl;
+
+        // loop for <runtime> period
+        for ( iteration=0;iteration<runtime;iteration++) {
+
+            // initialize a vector to store the objs
+            Vec_Ptr_t * vObj = Vec_PtrAlloc( 6 );
+
+            // SEQ-
+            minGain = -4;
+            int flex = 1;
+            while ( flex -- ) {
+                Abc_Obj_t * pTarget = WHY_RandNode( pNtk );
+                Solution solution = NodeRewrite( pTarget, MINGAIN );
+                if ( solution.leaves != NULL ) {
+                    Abc_Obj_t * pNew = NodeUpdate( pTarget );
+                    if ( Abc_ObjIsCi( pNew ) || Abc_ObjIsCo( pNew ) ) {
+                        continue;
+                    }
+                    if ( !Abc_ObjIsNode( pNew ) ) {
+                        continue;
+                    }
+                    // add the fanin and the fanin of fanin to the working vector
+                    Abc_ObjForEachFanin( pNew, pObj, i ) {
+                        int ii;
+                        Abc_Obj_t * pObjj;
+                        if ( Abc_ObjIsCo( pObj ) || Abc_ObjIsCi( pObj ) ) {
+                            continue;
+                        }
+                        if ( Abc_AigNodeIsAnd( pObj ) ) {
+                            Vec_PtrPush( vObj, pObj );
+                            Abc_ObjForEachFanin( pObj, pObjj, ii ) {
+                                if ( Abc_ObjIsCo( pObjj ) || Abc_ObjIsCi( pObjj ) ) {
+                                    continue;
+                                }
+                                if ( Abc_AigNodeIsAnd( pObjj ) ) {
+                                    Vec_PtrPush( vObj, pObjj );
+                                }
+                            }
+                        }                     
+                    }
+                    // add the fanout nodes to the working vector
+                    Abc_ObjForEachFanout( pNew, pObj, i ) {
+                        if ( Abc_ObjIsCo( pObj ) || Abc_ObjIsCi( pObj ) ) {
+                            continue;
+                        }
+                        if ( Abc_AigNodeIsAnd( pObj ) ) {
+                            Vec_PtrPush( vObj, pObj );
+                        }
+                    }
+                    Vec_PtrPush( vObj, pNew );
+                }
+            }
+
+
+        cerr << Abc_NtkNodeNum( pNtk ) << endl;
+
+            // SEQ+
+            minGain = 0;
+            Vec_PtrForEachEntry( Abc_Obj_t *, vObj, pObj, i ) {
+                if ( !Abc_ObjIsNode( pObj ) ) {
+                    continue;
+                }
+                if ( !Abc_AigNodeIsAnd( pObj ) ) {
+                    continue;
+                }
+                history[ Abc_ObjId( pObj ) ] = 0;
+                minGain = 1;
+                Solution solution = NodeRewrite( pObj, MINGAIN );
+                if ( solution.leaves != NULL ) {
+                    Abc_Obj_t * pObjNew = NodeUpdate( pObj );
+                    history[ Abc_ObjId( pObj ) ] = 1;
+                }
+            }
+
+            Vec_PtrFree( vObj );
+
+        cerr << Abc_NtkNodeNum( pNtk ) << endl;
+
+        }
+                
+        break;
+
     case RANDNEG:
         temperature = -1;
         for( iteration = 0, attemps = 0; attemps < runtime && iteration < runtime; attemps ++) {
             Abc_Obj_t * pTarget = WHY_RandNode( pNtk );
-            Solution solution = NodeRewrite( pTarget );
+            minGain = -1;
+            Solution solution = NodeRewrite( pTarget, MINGAIN );
             if ( solution.leaves != NULL ) {
 
                 // we find a valid solution
@@ -248,13 +372,15 @@ void SA :: Rewrite( RWR_METHOD method ) {
                     if ( !Abc_AigNodeIsAnd( pObj ) ) {
                         continue;
                     }
-                    Solution leaf = NodeRewrite( pObj );
+                    minGain = 1;
+                    Solution leaf = NodeRewrite( pObj, MINGAIN );
                     if ( leaf.leaves != NULL && leaf.gain > 0 ) {
                         NodeUpdate( pObj );
                     }
                 }
 
-                Solution root = NodeRewrite( pObjNew );
+                minGain = 1;
+                Solution root = NodeRewrite( pObjNew, MINGAIN );
                 if ( root.leaves != NULL && root.gain > 0 ) {
                     NodeUpdate( pObjNew );
                 }
